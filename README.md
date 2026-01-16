@@ -107,9 +107,9 @@ Claude generates a standardized JSON file with extracted data:
 
 **Download the JSON file** from Claude's output to your local machine.
 
-### Step 4: Upload to Google Sheets
+### Step 4: Upload to Google Sheets (Optional)
  
-We have provided a dedicated set of scripts and instructions in the `jsonToGoogleSheet/` folder to help you export the JSON data.
+I also have provided a dedicated set of scripts and instructions in the `jsonToGoogleSheet/` folder to help you export the JSON data to google sheets. But if you have Microsoft Excel locally, you don't need to do this step. You may need to create a Python script to convert the JSON files to a CSV or.xlsx format. 
 
 1. **Setup**: Follow the guides in `jsonToGoogleSheet/Google_SHEETS_SETUP.md` to configure Google API credentials.
 2. **Export**: Run the exporter script:
