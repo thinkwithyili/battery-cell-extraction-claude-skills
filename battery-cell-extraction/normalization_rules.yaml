@@ -1,0 +1,676 @@
+# =============================================================================
+# BATTERY CELL DATASHEET NORMALIZATION RULES
+# =============================================================================
+# Version: 1.0
+# Last Updated: 2026-01-09
+# Author: Yi Li
+#
+# This file defines patterns and mappings for normalizing heterogeneous
+# supplier datasheet formats into a standardized structure.
+# =============================================================================
+
+# =============================================================================
+# TABLE LAYOUT DETECTION PATTERNS
+# =============================================================================
+# These patterns help identify the structure of specification tables
+# before extraction begins.
+
+layout_patterns:
+  key_value:
+    description: "Simple 2-column parameter-value tables"
+    trigger_patterns:
+      - "single column of parameter names with adjacent values"
+      - "clear header row with 'Specification' or 'Value' column"
+      - "two columns only"
+    extraction_method: direct_pair
+    confidence: high
+    example_suppliers:
+      - A123
+      - EVE
+      - CATL (some datasheets)
+    
+  multi_condition:
+    description: "Tables with Item/Condition/Specification columns and merged cells"
+    trigger_patterns:
+      - "Item, Condition, Specification headers"
+      - "Numbered items (2.1, 2.2, etc.) in first column"
+      - "Merged cells spanning multiple sub-rows"
+      - "Column headers: Item|條項, Condition|條件, Specification|規格"
+    extraction_method: hierarchical
+    merge_cell_handling: inherit_from_above
+    confidence: high
+    example_suppliers:
+      - Samsung SDI
+      - LG Energy Solution
+      - SK On (detailed specs)
+    
+  visual_grouping:
+    description: "No visible table borders, relies on indentation/whitespace"
+    trigger_patterns:
+      - "no visible table borders"
+      - "indentation-based hierarchy"
+      - "bold category headers followed by indented child values"
+      - "whitespace alignment without grid lines"
+    extraction_method: whitespace_parse
+    priority_parsing:
+      - "Bold text → parent category"
+      - "Indented text → child values"
+    confidence: medium
+    
+  comparison_table:
+    description: "Multiple product columns with shared category rows"
+    trigger_patterns:
+      - "multiple model/product columns (3+ models)"
+      - "category column on left, values across multiple product columns"
+      - "rows spanning all columns (apply to all models)"
+    extraction_method: per_column
+    shared_row_handling: apply_to_all_models
+    output_format: "array of cell objects, one per model"
+    example_suppliers:
+      - SK On (product overview)
+      - Panasonic (model comparison)
+
+layout_detection_priority:
+  - step: 1
+    check: "multi-column product headers"
+    result: comparison_table
+  - step: 2
+    check: "Item | Condition | Specification structure"
+    result: multi_condition
+  - step: 3
+    check: "visible table borders with 2 columns"
+    result: key_value
+  - step: 4
+    check: "whitespace/indentation parsing fallback"
+    result: visual_grouping
+
+# =============================================================================
+# SUPPLIER-SPECIFIC FORMAT MAPPINGS
+# =============================================================================
+# Each supplier has unique terminology and formatting conventions.
+
+suppliers:
+  a123:
+    full_name: "A123 Systems"
+    typical_layout: key_value
+    chemistry_default: "LFP"
+    patterns:
+      dcir: "Internal Impedance.*?([\\d.]+).*?mΩ"
+      capacity: "Cell Capacity.*?([\\d.]+).*?(m?Ah)"
+      dimensions: "Cell Dimensions.*?Ø?([\\d.]+)\\s*[x×]\\s*([\\d.]+)"
+    field_mappings:
+      "Cell Capacity": capacity.nominal
+      "Maximum Continuous Discharge": current.max_continuous_discharge
+      "Standard Charge Current": current.standard_charge
+      "Cell Dimensions": mechanical.dimensions
+      "Cell Weight": mechanical.weight
+      "Internal Impedance": impedance.acir
+    notes:
+      - "Uses simple 2-column tables"
+      - "Dimensions often in Ø26 x 65 format"
+      - "Impedance measured at 1kHz AC"
+    
+  lg:
+    full_name: "LG Energy Solution"
+    typical_layout: multi_condition
+    patterns:
+      dcir: "DCIR.*?([\\d.]+).*?mΩ.*?(\\d+)°C"
+      capacity: "Nominal Capacity.*?([\\d.]+).*?(m?Ah)"
+      voltage: "Nominal Voltage.*?([\\d.]+).*?V"
+    field_mappings:
+      "Nominal Capacity": capacity.nominal
+      "Minimum Capacity": capacity.minimum
+      "Nominal Voltage": voltage.nominal
+      "Charge Voltage": voltage.max
+      "Discharge Cut-off Voltage": voltage.min
+      "Standard Charge": charge.standard
+      "Maximum Charge": charge.maximum
+      "Continuous Discharge": current.max_continuous_discharge
+      "Internal Resistance": impedance.acir
+      "Operating Temperature": temperature.operating
+    chemistry_mapping:
+      "NMC": "NMC"
+      "NCM": "NMC"  # Alternate naming
+      "NCMA": "NCMA"
+    notes:
+      - "Uses numbered items (2.1, 2.2, etc.)"
+      - "Often has merged cells for sub-specifications"
+      - "Temperature in separate charge/discharge rows"
+    
+  samsung:
+    full_name: "Samsung SDI"
+    typical_layout: multi_condition
+    patterns:
+      dcir: "AC impedance.*?([\\d.]+).*?mΩ"
+      capacity: "(?:Typical|Rated) Capacity.*?([\\d.]+).*?(m?Ah)"
+    field_mappings:
+      "Typical Capacity": capacity.nominal
+      "Minimum Capacity": capacity.minimum
+      "Rated Capacity": capacity.nominal
+      "Nominal Voltage": voltage.nominal
+      "Standard Charge": charge.standard
+      "AC Impedance": impedance.acir
+      "Maximum Discharge Rate": current.max_continuous_discharge
+      "Dimensions": mechanical.dimensions
+      "Weight": mechanical.weight
+    notes:
+      - "Similar to LG format with numbered sections"
+      - "May use 'Typical' vs 'Minimum' for capacity"
+      - "AC impedance at 1kHz standard"
+      
+  eve:
+    full_name: "EVE Energy"
+    typical_layout: key_value
+    patterns:
+      dcir: "Internal resistance.*?[≤<]?([\\d]+).*?mΩ"
+      capacity: "(?:Rated|Nominal) Capacity.*?([\\d.]+).*?(m?Ah)"
+    field_mappings:
+      "Rated Capacity": capacity.nominal
+      "Nominal Voltage": voltage.nominal
+      "Charging Voltage": voltage.max
+      "Discharging Cut-off Voltage": voltage.min
+      "Standard Charging Current": current.standard_charge
+      "Max Charging Current": current.max_charge
+      "Max Discharging Current": current.max_continuous_discharge
+      "Internal Resistance": impedance.acir
+      "Weight": mechanical.weight
+      "Dimension": mechanical.dimensions
+    notes:
+      - "Uses ≤ symbol for max values"
+      - "Often includes cycle life with specific conditions"
+      - "May use Chinese characters in bilingual versions"
+      
+  sk_on:
+    full_name: "SK On"
+    typical_layout: comparison_table
+    patterns:
+      capacity: "Capacity.*?([\\d.]+)\\s*(Ah|mAh)"
+    field_mappings:
+      "Capacity (Ah)": capacity.nominal
+      "Energy (Wh)": derived.energy
+      "Voltage (V)": voltage.nominal
+      "Performance": performance_category
+    multi_model: true
+    notes:
+      - "Often shows multiple models side by side"
+      - "Energy may be directly provided"
+      - "Some rows apply to all models (Quick Charge specs)"
+
+  panasonic:
+    full_name: "Panasonic Energy"
+    typical_layout: key_value
+    patterns:
+      capacity: "Nominal Capacity.*?([\\d.]+).*?(m?Ah)"
+      dimensions: "Dimensions.*?([\\d.]+)\\s*[x×]\\s*([\\d.]+)"
+    field_mappings:
+      "Nominal Capacity": capacity.nominal
+      "Minimum Capacity": capacity.minimum
+      "Nominal Voltage": voltage.nominal
+      "Charging Method": charge.method
+      "Max. Discharge Current": current.max_continuous_discharge
+      "Dimensions": mechanical.dimensions
+      "Weight (approx.)": mechanical.weight
+    notes:
+      - "Often includes cycle life graphs"
+      - "May have NCR prefix for model numbers"
+
+  catl:
+    full_name: "CATL"
+    typical_layout: key_value
+    patterns:
+      capacity: "Capacity.*?([\\d.]+)\\s*(Ah)"
+    field_mappings:
+      "Nominal Capacity": capacity.nominal
+      "Nominal Voltage": voltage.nominal
+      "Specific Energy": derived.energy_density_gravimetric
+      "Cycle Life": lifetime.cycle_life
+    notes:
+      - "Often focuses on module/pack level specs"
+      - "May include energy density at cell level"
+
+# =============================================================================
+# COMPREHENSIVE FIELD ALIASES
+# =============================================================================
+# Maps various terminology to standard field names.
+
+field_aliases:
+  # --- Capacity Variations ---
+  capacity:
+    standard_name: "capacity"
+    aliases:
+      - "nominal capacity"
+      - "rated capacity"
+      - "typical capacity"
+      - "min. capacity"
+      - "minimum capacity"
+      - "cell capacity"
+      - "cell capacity (nominal/minimum)"
+      - "capacity (ah)"
+      - "battery capacity"
+      - "energy capacity"
+      # Chinese
+      - "额定容量"
+      - "标称容量"
+      - "容量"
+    
+  # --- Voltage Variations ---
+  voltage:
+    standard_name: "voltage"
+    aliases:
+      - "nominal voltage"
+      - "cell voltage"
+      - "operating voltage"
+      - "voltage (v)"
+      - "working voltage"
+      - "average voltage"
+      # Subcategories
+      - "charge voltage"
+      - "charging voltage limit"
+      - "cut-off voltage"
+      - "discharge cut-off"
+      - "discharge cutoff voltage"
+      - "end-of-discharge voltage"
+      # Chinese
+      - "标称电压"
+      - "额定电压"
+      - "电压"
+      - "充电电压"
+      - "放电截止电压"
+    
+  # --- Internal Resistance Variations ---
+  dcir:
+    standard_name: "impedance"
+    aliases:
+      - "dcir"
+      - "dc internal resistance"
+      - "dc-ir"
+      - "ac impedance"
+      - "acir"
+      - "ac-ir"
+      - "internal resistance"
+      - "internal impedance"
+      - "internal impedance (1khz ac)"
+      - "typical impedance"
+      - "cell impedance"
+      - "ir"
+      # Chinese
+      - "内阻"
+      - "交流内阻"
+      - "直流内阻"
+  
+  # --- Discharge Current Variations ---
+  max_discharge:
+    standard_name: "current.max_continuous_discharge"
+    aliases:
+      - "maximum continuous discharge"
+      - "max. discharge current"
+      - "max discharge current"
+      - "discharge current"
+      - "continuous discharge"
+      - "continuous discharge current"
+      - "max. continuous discharge"
+      - "maximum discharge"
+      - "standard discharge"
+      - "discharge rate"
+      - "max discharge rate"
+      # Chinese
+      - "最大放电电流"
+      - "持续放电电流"
+      - "放电电流"
+    
+  # --- Charge Current Variations ---
+  max_charge:
+    standard_name: "current.max_charge"
+    aliases:
+      - "recommended standard charge method"
+      - "recommended fast charge"
+      - "standard charge"
+      - "standard charge current"
+      - "standard charging current"
+      - "max charge current"
+      - "maximum charge current"
+      - "max. charge"
+      - "max charging current"
+      - "fast charge"
+      - "quick charge"
+      - "charge current"
+      - "charging current"
+      - "pulse charge"
+      # Chinese
+      - "标准充电电流"
+      - "最大充电电流"
+      - "充电电流"
+    
+  # --- Cycle Life Variations ---
+  cycle_life:
+    standard_name: "lifetime.cycle_life"
+    aliases:
+      - "cycle life"
+      - "cycle performance"
+      - "life cycles"
+      - "endurance"
+      - "cycling performance"
+      - "charge/discharge cycles"
+      - "number of cycles"
+      - "cycle number"
+      - "expected cycle life"
+      # Chinese
+      - "循环寿命"
+      - "循环次数"
+    
+  # --- Operating Temperature Variations ---
+  operating_temperature:
+    standard_name: "temperature.operating"
+    aliases:
+      - "operating temperature"
+      - "operation temperature"
+      - "working temperature"
+      - "temperature"
+      - "temp. range"
+      - "operating temp"
+      - "charge temperature"
+      - "charging temperature"
+      - "discharge temperature"
+      - "discharging temperature"
+      # Chinese
+      - "工作温度"
+      - "充电温度"
+      - "放电温度"
+      - "使用温度"
+    
+  # --- Storage Temperature Variations ---
+  storage_temperature:
+    standard_name: "temperature.storage"
+    aliases:
+      - "storage temperature"
+      - "storage temp"
+      - "storage"
+      - "long-term storage"
+      - "recommended storage"
+      # Chinese
+      - "储存温度"
+      - "存储温度"
+    
+  # --- Dimension Variations ---
+  dimensions:
+    standard_name: "mechanical.dimensions"
+    aliases:
+      - "cell dimensions"
+      - "dimension"
+      - "dimensions"
+      - "size"
+      - "cell size"
+      - "l*w*t"
+      - "l x w x t"
+      - "length x width x thickness"
+      - "diameter x height"
+      # Chinese
+      - "尺寸"
+      - "外形尺寸"
+    
+  # --- Weight Variations ---
+  weight:
+    standard_name: "mechanical.weight"
+    aliases:
+      - "cell weight"
+      - "weight"
+      - "mass"
+      - "cell mass"
+      - "weight (approx.)"
+      - "approx. weight"
+      - "typical weight"
+      # Chinese
+      - "重量"
+      - "质量"
+
+# =============================================================================
+# UNIT NORMALIZATION RULES
+# =============================================================================
+
+unit_conversions:
+  capacity:
+    # All capacity values normalized to Ah
+    target_unit: "ah"
+    conversions:
+      mah: 0.001    # mAh → Ah: multiply by 0.001
+      ah: 1.0       # Ah → Ah: no change
+      kwh: null     # kWh → Ah: requires voltage (context-dependent)
+      wh: null      # Wh → Ah: requires voltage (context-dependent)
+    
+  resistance:
+    # All resistance values normalized to mΩ
+    target_unit: "mohm"
+    conversions:
+      mohm: 1.0     # mΩ → mΩ: no change
+      ohm: 1000.0   # Ω → mΩ: multiply by 1000
+      μohm: 0.001   # μΩ → mΩ: multiply by 0.001
+      
+  temperature:
+    # All temperatures normalized to Celsius
+    target_unit: "c"
+    conversions:
+      c: 1.0        # °C → °C: no change
+      f: "(F - 32) * 5/9"  # °F → °C: formula
+      k: "(K - 273.15)"    # K → °C: formula
+      
+  current:
+    # Current in Amps, C-rates require capacity context
+    target_unit: "a"
+    conversions:
+      a: 1.0        # A → A: no change
+      ma: 0.001     # mA → A: multiply by 0.001
+      c_rate: null  # C → A: requires capacity (multiply by Ah)
+      
+  weight:
+    # All weights normalized to grams
+    target_unit: "g"
+    conversions:
+      g: 1.0        # g → g: no change
+      kg: 1000.0    # kg → g: multiply by 1000
+      mg: 0.001     # mg → g: multiply by 0.001
+      
+  dimensions:
+    # All dimensions normalized to mm
+    target_unit: "mm"
+    conversions:
+      mm: 1.0       # mm → mm: no change
+      cm: 10.0      # cm → mm: multiply by 10
+      m: 1000.0     # m → mm: multiply by 1000
+      inch: 25.4    # in → mm: multiply by 25.4
+
+  energy:
+    # All energy normalized to Wh
+    target_unit: "wh"
+    conversions:
+      wh: 1.0       # Wh → Wh: no change
+      kwh: 1000.0   # kWh → Wh: multiply by 1000
+      mwh: 0.001    # mWh → Wh: multiply by 0.001
+      j: 0.000278   # J → Wh: divide by 3600
+
+# =============================================================================
+# CHEMISTRY IDENTIFICATION
+# =============================================================================
+
+chemistry_patterns:
+  NMC:
+    aliases:
+      - "NMC"
+      - "NCM"
+      - "Li-NMC"
+      - "Lithium Nickel Manganese Cobalt"
+      - "LiNiMnCoO2"
+    typical_voltage:
+      nominal: 3.6
+      max: 4.2
+      min: 2.5
+      
+  LFP:
+    aliases:
+      - "LFP"
+      - "LiFePO4"
+      - "Lithium Iron Phosphate"
+      - "Li-Iron"
+    typical_voltage:
+      nominal: 3.2
+      max: 3.65
+      min: 2.0
+      
+  NCA:
+    aliases:
+      - "NCA"
+      - "Li-NCA"
+      - "Lithium Nickel Cobalt Aluminum"
+      - "LiNiCoAlO2"
+    typical_voltage:
+      nominal: 3.6
+      max: 4.2
+      min: 2.5
+      
+  NCMA:
+    aliases:
+      - "NCMA"
+      - "NCM-A"
+      - "Lithium Nickel Cobalt Manganese Aluminum"
+    typical_voltage:
+      nominal: 3.6
+      max: 4.2
+      min: 2.5
+      
+  LCO:
+    aliases:
+      - "LCO"
+      - "LiCoO2"
+      - "Lithium Cobalt Oxide"
+    typical_voltage:
+      nominal: 3.7
+      max: 4.2
+      min: 3.0
+
+  LTO:
+    aliases:
+      - "LTO"
+      - "Li4Ti5O12"
+      - "Lithium Titanate"
+    typical_voltage:
+      nominal: 2.4
+      max: 2.8
+      min: 1.5
+
+# =============================================================================
+# CELL FORMAT IDENTIFICATION
+# =============================================================================
+
+cell_format_patterns:
+  cylindrical:
+    indicators:
+      - "cylindrical"
+      - "18650"
+      - "21700"
+      - "26650"
+      - "32700"
+      - "4680"
+      - "46800"
+      - "ø"
+      - "diameter"
+    dimension_pattern: "Ø?\\d+\\s*[x×]\\s*\\d+"
+    
+  pouch:
+    indicators:
+      - "pouch"
+      - "pouch cell"
+      - "laminated"
+      - "polymer"
+      - "soft pack"
+      - "L x W x T"
+    dimension_pattern: "\\d+\\s*[x×*]\\s*\\d+\\s*[x×*]\\s*\\d+"
+    
+  prismatic:
+    indicators:
+      - "prismatic"
+      - "prismatic cell"
+      - "aluminum case"
+      - "metal case"
+      - "can type"
+      - "square"
+    dimension_pattern: "\\d+\\s*[x×*]\\s*\\d+\\s*[x×*]\\s*\\d+"
+
+# =============================================================================
+# VALIDATION RULES
+# =============================================================================
+
+validation:
+  required_fields:
+    - "cell_info.manufacturer"
+    - "cell_info.model_number"
+    - "electrical.capacity.nominal_ah"
+    - "electrical.voltage.nominal_v"
+    - "cell_info.cell_format"
+    
+  value_ranges:
+    capacity_ah:
+      min: 0.01
+      max: 500
+      unit: "Ah"
+      
+    voltage_nominal:
+      min: 1.5
+      max: 4.5
+      unit: "V"
+      
+    voltage_max:
+      min: 2.0
+      max: 5.0
+      unit: "V"
+      
+    voltage_min:
+      min: 1.0
+      max: 3.5
+      unit: "V"
+      
+    impedance_mohm:
+      min: 0.1
+      max: 500
+      unit: "mΩ"
+      
+    weight_g:
+      min: 1
+      max: 10000
+      unit: "g"
+      
+    temperature_c:
+      min: -60
+      max: 100
+      unit: "°C"
+      
+    current_a:
+      min: 0.01
+      max: 1000
+      unit: "A"
+      
+    cycles:
+      min: 1
+      max: 100000
+      unit: "cycles"
+
+  consistency_checks:
+    - rule: "voltage.max > voltage.nominal"
+      warning: "Max voltage should be greater than nominal voltage"
+    - rule: "voltage.nominal > voltage.min"
+      warning: "Nominal voltage should be greater than min voltage"
+    - rule: "capacity.nominal_ah >= capacity.minimum_ah"
+      warning: "Nominal capacity should be >= minimum capacity"
+    - rule: "temperature.operating.charge.max <= 60"
+      warning: "Charge temperature max typically ≤ 60°C"
+
+# =============================================================================
+# METADATA
+# =============================================================================
+
+metadata:
+  version: "1.0"
+  last_updated: "2026-01-09"
+  author: "Yi Li"
+  description: |
+    Normalization rules for battery cell datasheet extraction.
+    Supports major Li-ion cell suppliers including LG, Samsung, EVE, A123,
+    SK On, Panasonic, and CATL.
