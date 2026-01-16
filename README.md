@@ -32,10 +32,11 @@ This project provides a Claude Skill that automates the extraction and standardi
 
 | Component | Size | Features |
 |-----------|------|----------|
-| **SKILL.md** | ~13KB | 5 instruction sections, 3 worked examples, pattern recognition guide |
+| **SKILL.md** | ~6KB | 5 instruction sections, worked example, pattern recognition guide |
 | **extractor.py** | ~34KB | 15+ parsing functions, unit conversion, derived calculations |
 | **normalization_rules.yaml** | ~19KB | 4 layout patterns, 7 supplier mappings, 100+ field aliases |
 | **validation_schema.json** | ~38KB | JSON Schema v7 with complete property definitions |
+| **sheets_exporter.py** | ~26KB | Google Sheets export, batch processing, CSV generation |
 
 ---
 
@@ -110,7 +111,7 @@ Claude generates a standardized JSON file with extracted data:
  
 We have provided a dedicated set of scripts and instructions in the `jsonToGoogleSheet/` folder to help you export the JSON data.
 
-1. **Setup**: Follow the guides in `jsonToGoogleSheet/SHEETS_SETUP.md` to configure Google API credentials.
+1. **Setup**: Follow the guides in `jsonToGoogleSheet/Google_SHEETS_SETUP.md` to configure Google API credentials.
 2. **Export**: Run the exporter script:
    ```bash
    python jsonToGoogleSheet/sheets_exporter.py output/cell2.json --sheet "Battery Cell Database"
@@ -151,19 +152,17 @@ Missing fields are listed in a `fields_missing` array. Warnings capture specific
 ## Project Structure
 
 ```
-claude-skills-vault/
-├── README.md                         # This file
-└── cellDataExt_ClaudeSkills/
-    ├── battery-cell-extraction/
-    │   ├── SKILL.md                  # Claude Skill definition
-    │   ├── sheets_exporter.py        # Google Sheets export script
-    │   ├── SHEETS_SETUP.md           # Google API setup guide
-    │   ├── normalization_rules.yaml  # Supplier-specific format mappings
-    │   ├── validation_schema.json    # Output validation schema
-    │   └── scripts/
-    │       └── extractor.py          # Text parsing utilities
-    ├── celldataSheet/                # Sample datasheets
-    └── plan/                         # Planning documents
+battery-cell-extraction-claude-skills/
+├── README.md                               # This file
+├── battery-cell-extraction/
+│   ├── SKILL.md                            # Claude Skill definition
+│   ├── normalization_rules.yaml            # Supplier-specific format mappings
+│   ├── validation_schema.json              # Output validation schema
+│   └── scripts/
+│       └── extractor.py                    # Text parsing utilities
+└── jsonToGoogleSheet/
+    ├── Google_SHEETS_SETUP.md              # Google API setup guide
+    └── sheets_exporter.py                  # Google Sheets export script
 ```
 
 ---
