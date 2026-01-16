@@ -1,0 +1,995 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "battery-cell-extraction-schema-v1.0",
+    "title": "Battery Cell Extraction Schema",
+    "description": "Standardized output schema for battery cell datasheet extraction. Enables consistent data structure across all cell manufacturers and formats.",
+    "version": "1.0",
+    "type": "object",
+    "required": [
+        "cell_info",
+        "electrical"
+    ],
+    "properties": {
+        "cell_info": {
+            "type": "object",
+            "description": "Basic cell identification information",
+            "required": [
+                "manufacturer",
+                "model_number",
+                "cell_format"
+            ],
+            "properties": {
+                "manufacturer": {
+                    "type": "string",
+                    "description": "Cell manufacturer name",
+                    "examples": [
+                        "Samsung SDI",
+                        "LG Energy Solution",
+                        "A123 Systems",
+                        "EVE Energy",
+                        "SK On",
+                        "Panasonic",
+                        "CATL"
+                    ]
+                },
+                "model_number": {
+                    "type": "string",
+                    "description": "Supplier part number or model designation",
+                    "examples": [
+                        "INR21700-50E",
+                        "ANR26650",
+                        "INR18650MH1"
+                    ]
+                },
+                "chemistry": {
+                    "type": "string",
+                    "description": "Cell chemistry type",
+                    "enum": [
+                        "NMC",
+                        "LFP",
+                        "NCA",
+                        "NCMA",
+                        "LCO",
+                        "LTO",
+                        "LMO",
+                        "unknown"
+                    ],
+                    "examples": [
+                        "NMC",
+                        "LFP",
+                        "NCA"
+                    ]
+                },
+                "cell_format": {
+                    "type": "string",
+                    "description": "Physical form factor",
+                    "enum": [
+                        "cylindrical",
+                        "pouch",
+                        "prismatic"
+                    ]
+                },
+                "cell_format_code": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Format code for cylindrical cells (e.g., 21700, 18650, 4680)",
+                    "examples": [
+                        "21700",
+                        "18650",
+                        "26650",
+                        "4680"
+                    ]
+                },
+                "datasheet_source": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Original filename or URL of the datasheet"
+                },
+                "extraction_date": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "format": "date-time",
+                    "description": "ISO 8601 timestamp of when extraction was performed"
+                },
+                "datasheet_revision": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Version or revision number from the datasheet"
+                },
+                "confidence_overall": {
+                    "type": "string",
+                    "description": "Overall confidence in the extraction quality",
+                    "enum": [
+                        "high",
+                        "medium",
+                        "low"
+                    ]
+                }
+            }
+        },
+        "mechanical": {
+            "type": "object",
+            "description": "Physical and mechanical properties",
+            "properties": {
+                "cylindrical_dimensions": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "description": "Dimensions for cylindrical cells (18650, 21700, etc.)",
+                    "properties": {
+                        "diameter_mm": {
+                            "type": "number",
+                            "minimum": 1,
+                            "maximum": 100,
+                            "description": "Cell diameter in mm"
+                        },
+                        "height_mm": {
+                            "type": "number",
+                            "minimum": 1,
+                            "maximum": 200,
+                            "description": "Cell height/length in mm"
+                        }
+                    }
+                },
+                "pouch_dimensions": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "description": "Dimensions for pouch cells",
+                    "properties": {
+                        "length_mm": {
+                            "type": "number",
+                            "minimum": 1,
+                            "description": "Longest edge in mm"
+                        },
+                        "width_mm": {
+                            "type": "number",
+                            "minimum": 1,
+                            "description": "Second longest edge in mm"
+                        },
+                        "thickness_mm": {
+                            "type": "number",
+                            "minimum": 0.1,
+                            "description": "Thinnest dimension in mm"
+                        }
+                    }
+                },
+                "prismatic_dimensions": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "description": "Dimensions for prismatic cells",
+                    "properties": {
+                        "length_mm": {
+                            "type": "number",
+                            "minimum": 1,
+                            "description": "Length (L) in mm"
+                        },
+                        "width_mm": {
+                            "type": "number",
+                            "minimum": 1,
+                            "description": "Width (W) in mm"
+                        },
+                        "height_mm": {
+                            "type": "number",
+                            "minimum": 1,
+                            "description": "Height (H) in mm"
+                        }
+                    }
+                },
+                "weight_g": {
+                    "type": [
+                        "number",
+                        "null"
+                    ],
+                    "minimum": 0,
+                    "description": "Cell mass in grams"
+                },
+                "volume_ml": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "description": "Cell volume in milliliters (cm³)",
+                    "properties": {
+                        "value": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "description": "Volume in mL"
+                        },
+                        "source": {
+                            "type": "string",
+                            "enum": [
+                                "calculated",
+                                "provided"
+                            ],
+                            "description": "Whether value was calculated or provided in datasheet"
+                        },
+                        "calculation": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "Calculation formula used if calculated"
+                        }
+                    }
+                }
+            }
+        },
+        "electrical": {
+            "type": "object",
+            "description": "Electrical characteristics",
+            "required": [
+                "capacity",
+                "voltage"
+            ],
+            "properties": {
+                "capacity": {
+                    "type": "object",
+                    "description": "Cell capacity specifications",
+                    "properties": {
+                        "nominal_ah": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "description": "Nominal/typical capacity in Ah"
+                        },
+                        "minimum_ah": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "description": "Minimum guaranteed capacity in Ah"
+                        },
+                        "unit_original": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "Original unit from datasheet (mAh or Ah)"
+                        }
+                    }
+                },
+                "voltage": {
+                    "type": "object",
+                    "description": "Cell voltage specifications",
+                    "properties": {
+                        "nominal_v": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 5,
+                            "description": "Nominal voltage in V"
+                        },
+                        "max_v": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 5,
+                            "description": "Maximum charge voltage in V"
+                        },
+                        "min_v": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 4,
+                            "description": "Minimum discharge cutoff voltage in V"
+                        }
+                    }
+                },
+                "impedance": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "description": "Internal impedance measurements",
+                    "properties": {
+                        "acir": {
+                            "type": [
+                                "object",
+                                "null"
+                            ],
+                            "description": "AC internal resistance",
+                            "properties": {
+                                "value_mohm": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ],
+                                    "minimum": 0,
+                                    "description": "AC impedance in mΩ"
+                                },
+                                "frequency_hz": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "description": "Measurement frequency (typically 1000 Hz)"
+                                },
+                                "temperature_c": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ],
+                                    "description": "Test temperature in °C"
+                                },
+                                "soc_percent": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ],
+                                    "minimum": 0,
+                                    "maximum": 100,
+                                    "description": "State of charge during test"
+                                }
+                            }
+                        },
+                        "dcir": {
+                            "type": [
+                                "object",
+                                "null"
+                            ],
+                            "description": "DC internal resistance",
+                            "properties": {
+                                "value_mohm": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ],
+                                    "minimum": 0,
+                                    "description": "DC internal resistance in mΩ"
+                                },
+                                "pulse_duration_s": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ],
+                                    "description": "Pulse duration for measurement in seconds"
+                                },
+                                "temperature_c": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ],
+                                    "description": "Test temperature in °C"
+                                },
+                                "soc_percent": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ],
+                                    "minimum": 0,
+                                    "maximum": 100,
+                                    "description": "State of charge during test"
+                                }
+                            }
+                        }
+                    }
+                },
+                "current": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "description": "Current ratings",
+                    "properties": {
+                        "max_continuous_discharge_a": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "description": "Maximum continuous discharge current in A"
+                        },
+                        "max_continuous_charge_a": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "description": "Maximum continuous charge current in A"
+                        },
+                        "standard_charge_a": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "description": "Standard/recommended charge current in A"
+                        },
+                        "max_pulse_discharge": {
+                            "type": [
+                                "object",
+                                "null"
+                            ],
+                            "description": "Maximum pulse discharge specification",
+                            "properties": {
+                                "value_a": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ],
+                                    "minimum": 0,
+                                    "description": "Max pulse discharge current in A"
+                                },
+                                "duration_s": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ],
+                                    "description": "Pulse duration in seconds"
+                                },
+                                "temperature_cutoff_c": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ],
+                                    "description": "Temperature cutoff if specified"
+                                }
+                            }
+                        },
+                        "max_pulse_charge": {
+                            "type": [
+                                "object",
+                                "null"
+                            ],
+                            "description": "Maximum pulse charge specification",
+                            "properties": {
+                                "value_a": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ],
+                                    "minimum": 0,
+                                    "description": "Max pulse charge current in A"
+                                },
+                                "duration_s": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ],
+                                    "description": "Pulse duration in seconds"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "temperature": {
+            "type": [
+                "object",
+                "null"
+            ],
+            "description": "Temperature specifications",
+            "properties": {
+                "operating": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "description": "Operating temperature ranges",
+                    "properties": {
+                        "charge": {
+                            "type": [
+                                "object",
+                                "null"
+                            ],
+                            "properties": {
+                                "min_c": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ],
+                                    "description": "Minimum charging temperature in °C"
+                                },
+                                "max_c": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ],
+                                    "description": "Maximum charging temperature in °C"
+                                }
+                            }
+                        },
+                        "discharge": {
+                            "type": [
+                                "object",
+                                "null"
+                            ],
+                            "properties": {
+                                "min_c": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ],
+                                    "description": "Minimum discharge temperature in °C"
+                                },
+                                "max_c": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ],
+                                    "description": "Maximum discharge temperature in °C"
+                                }
+                            }
+                        }
+                    }
+                },
+                "storage": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "description": "Storage temperature specifications",
+                    "properties": {
+                        "min_c": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "description": "Minimum storage temperature in °C"
+                        },
+                        "max_c": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "description": "Maximum storage temperature in °C"
+                        },
+                        "recommended_soc_percent": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 100,
+                            "description": "Recommended SOC for storage"
+                        }
+                    }
+                }
+            }
+        },
+        "lifetime": {
+            "type": [
+                "object",
+                "null"
+            ],
+            "description": "Lifetime and aging characteristics",
+            "properties": {
+                "cycle_life": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "description": "Cycle life specification with test conditions",
+                    "properties": {
+                        "cycles": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "description": "Number of cycles"
+                        },
+                        "end_of_life_soh_percent": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 100,
+                            "description": "Remaining capacity at end of life (typically 80%)"
+                        },
+                        "dod_percent": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "maximum": 100,
+                            "description": "Depth of discharge during test"
+                        },
+                        "charge_rate_c": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "description": "C-rate for charging during test"
+                        },
+                        "discharge_rate_c": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0,
+                            "description": "C-rate for discharging during test"
+                        },
+                        "temperature_c": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "description": "Test temperature in °C"
+                        },
+                        "notes": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "Additional conditions from datasheet"
+                        }
+                    }
+                },
+                "calendar_life": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "description": "Calendar aging specification",
+                    "properties": {
+                        "years": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "description": "Expected calendar life in years"
+                        },
+                        "conditions": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "description": "Storage conditions for calendar life"
+                        }
+                    }
+                }
+            }
+        },
+        "derived": {
+            "type": [
+                "object",
+                "null"
+            ],
+            "description": "Calculated/derived properties",
+            "properties": {
+                "energy_wh": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "description": "Total energy in Wh",
+                    "properties": {
+                        "value": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0
+                        },
+                        "source": {
+                            "type": "string",
+                            "enum": [
+                                "provided",
+                                "calculated",
+                                "missing"
+                            ]
+                        },
+                        "calculation": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    }
+                },
+                "max_power_w": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "description": "Maximum power in Watts",
+                    "properties": {
+                        "value": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0
+                        },
+                        "source": {
+                            "type": "string",
+                            "enum": [
+                                "provided",
+                                "calculated_from_pulse",
+                                "calculated_from_continuous",
+                                "missing"
+                            ]
+                        },
+                        "calculation": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        },
+                        "pulse_data_available": {
+                            "type": "boolean",
+                            "description": "True if pulse current was used (not underestimated)"
+                        }
+                    }
+                },
+                "energy_density_gravimetric": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "description": "Gravimetric energy density (Wh/kg)",
+                    "properties": {
+                        "value_wh_per_kg": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0
+                        },
+                        "source": {
+                            "type": "string",
+                            "enum": [
+                                "provided",
+                                "calculated"
+                            ]
+                        },
+                        "calculation": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    }
+                },
+                "power_density_gravimetric": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "description": "Gravimetric power density (W/kg)",
+                    "properties": {
+                        "value_w_per_kg": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0
+                        },
+                        "source": {
+                            "type": "string",
+                            "enum": [
+                                "provided",
+                                "calculated"
+                            ]
+                        },
+                        "calculation": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        },
+                        "pulse_data_available": {
+                            "type": "boolean"
+                        }
+                    }
+                },
+                "energy_density_volumetric": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "description": "Volumetric energy density (Wh/L)",
+                    "properties": {
+                        "value_wh_per_l": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0
+                        },
+                        "source": {
+                            "type": "string",
+                            "enum": [
+                                "provided",
+                                "calculated"
+                            ]
+                        },
+                        "calculation": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    }
+                },
+                "power_density_volumetric": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "description": "Volumetric power density (W/L)",
+                    "properties": {
+                        "value_w_per_l": {
+                            "type": [
+                                "number",
+                                "null"
+                            ],
+                            "minimum": 0
+                        },
+                        "source": {
+                            "type": "string",
+                            "enum": [
+                                "provided",
+                                "calculated"
+                            ]
+                        },
+                        "calculation": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        },
+                        "pulse_data_available": {
+                            "type": "boolean"
+                        }
+                    }
+                }
+            }
+        },
+        "safety": {
+            "type": [
+                "object",
+                "null"
+            ],
+            "description": "Safety certifications and ratings",
+            "properties": {
+                "certifications": {
+                    "type": [
+                        "array",
+                        "null"
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Safety certifications (UN38.3, UL, CE, etc.)"
+                },
+                "notes": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Additional safety notes"
+                }
+            }
+        },
+        "extraction_metadata": {
+            "type": "object",
+            "description": "Metadata about the extraction process",
+            "properties": {
+                "fields_extracted": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of fields successfully extracted"
+                },
+                "fields_calculated": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of fields that were calculated/derived"
+                },
+                "fields_missing": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "List of fields not found in datasheet"
+                },
+                "confidence_scores": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "description": "Per-section confidence ratings",
+                    "properties": {
+                        "mechanical": {
+                            "type": "string",
+                            "enum": [
+                                "high",
+                                "medium",
+                                "low"
+                            ]
+                        },
+                        "electrical": {
+                            "type": "string",
+                            "enum": [
+                                "high",
+                                "medium",
+                                "low"
+                            ]
+                        },
+                        "temperature": {
+                            "type": "string",
+                            "enum": [
+                                "high",
+                                "medium",
+                                "low"
+                            ]
+                        },
+                        "lifetime": {
+                            "type": "string",
+                            "enum": [
+                                "high",
+                                "medium",
+                                "low"
+                            ]
+                        }
+                    }
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Flags, concerns, or notes about the extraction"
+                },
+                "table_layout_detected": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "enum": [
+                        "key_value",
+                        "multi_condition",
+                        "visual_grouping",
+                        "comparison_table",
+                        null
+                    ],
+                    "description": "The table layout pattern that was detected"
+                },
+                "supplier_format_matched": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Which supplier format pattern was matched (if any)"
+                },
+                "extraction_tool_version": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "Version of the extraction skill/tool used"
+                }
+            }
+        }
+    }
+}
