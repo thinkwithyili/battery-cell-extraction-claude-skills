@@ -154,6 +154,7 @@ Missing fields are listed in a `fields_missing` array. Warnings capture specific
 ```
 battery-cell-extraction-claude-skills/
 ├── README.md                               # This file
+├── cellDataSheetDemo/                    # Demo PDF files for CellData sheets
 ├── battery-cell-extraction/
 │   ├── SKILL.md                            # Claude Skill definition
 │   ├── normalization_rules.yaml            # Supplier-specific format mappings
